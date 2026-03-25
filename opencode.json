@@ -1,0 +1,110 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "github-copilot/claude-opus-4.6",
+  "small_model": "github-copilot/claude-haiku-4-5",
+  "permission": {
+    "edit": "allow",
+    "bash": "allow",
+    "webfetch": "allow"
+  },
+  "tools": [
+    {
+      "name": "capture_image",
+      "description": "Captures an image from the ESP32-S3-EYE. In 'dataset' mode, it saves the raw image to /data/dataset_raw/ for training.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "device_id": {
+            "type": "string",
+            "description": "Identifier for the ESP32-S3-EYE."
+          },
+          "mode": {
+            "type": "string",
+            "enum": ["dataset", "inference"],
+            "description": "Use 'dataset' for Phase 0 (Data Acquisition) or 'inference' for production."
+          },
+          "class_label": {
+            "type": "string",
+            "description": "Target folder name (e.g., 'circle', 'triangle') when in dataset mode."
+          }
+        },
+        "required": ["device_id", "mode"]
+      },
+      "allowed_callers": ["code_execution_20260120"]
+    },
+    {
+      "name": "trigger_plc_input",
+      "description": "Writes the shape code (0-4) to Holding Register 40001 of the Siemens S7-1200 PLC via Modbus TCP. This replaces the old physical GPIO triggering.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "register_value": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4,
+            "description": "Value to write: 0=Unknown, 1=Circle, 2=Square, 3=Rectangle, 4=Triangle."
+          },
+          "plc_ip": {
+            "type": "string",
+            "default": "192.168.1.10",
+            "description": "IP address of the PLC on the network."
+          }
+        },
+        "required": ["register_value"]
+      },
+      "allowed_callers": ["code_execution_20260120"]
+    },
+    {
+      "name": "control_kuka_robot",
+      "description": "Controls the Kuka KR4 R600 robot by activating its input ports. This executes predefined programs (Square, Rectangle, Circle, Triangle) based on the specified port. Returns action confirmation in JSON format.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "robot_action_port": {
+            "type": "integer",
+            "description": "Robot port number to activate, triggering a specific pre-loaded motion program."
+          },
+          "operation_command": {
+            "type": "string",
+            "enum": ["start_program", "stop_immediate", "reset_fault", "move_to_home"],
+            "description": "Operational command to manage the robot state."
+          }
+        },
+        "required": ["robot_action_port", "operation_command"]
+      },
+      "allowed_callers": ["code_execution_20260120"]
+    },
+    {
+      "name": "update_process_dashboard",
+      "description": "Updates the real-time dashboard with the current phase status (Capture, PLC, Robot, End). It sends a JSON object to the backend to be displayed on the frontend UI.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "phase": {
+            "type": "string",
+            "enum": ["CAPTURE", "PLC_TRIGGER", "ROBOT_EXECUTION", "COMPLETED", "ERROR"]
+          },
+          "status_message": { "type": "string" },
+          "is_success": { "type": "boolean" }
+        },
+        "required": ["phase", "status_message", "is_success"]
+      },
+      "allowed_callers": ["code_execution_20260120"]
+    }
+  ],
+  "formatter": {
+    "prettier": {
+      "command": ["npx", "prettier", "--write", "$FILE"],
+      "extensions": [".ts", ".tsx", ".js", ".jsx", ".html", ".css", ".json"]
+    }
+  },
+  "watcher": {
+    "ignore": ["node_modules/**", "dist/**", ".git/**", ".angular/**"]
+  },
+  "instructions": ["AGENTS.md"],
+  "compaction": {
+    "auto": true,
+    "prune": true
+  },
+  "autoupdate": true
+}
